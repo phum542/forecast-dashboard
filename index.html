@@ -236,6 +236,30 @@ return DATA.seg_stats[statsKey].Churn_Rate_Pct;
 return DATA.churn_rate[n-1];
 }
 
+// ============ DOUGHNUT: update ตาม region จริง (มี animation) ============
+function updateSegmentChart(region){
+var segData = (DATA.segment_by_region && DATA.segment_by_region[region])
+? DATA.segment_by_region[region]
+: DATA.segment_latest;
+
+var labels = [], values = [], colors = [];
+for(var i=0;i<SEGMENT_ORDER.length;i++){
+var key = SEGMENT_ORDER[i];
+labels.push(SEGMENT_LABELS[key]);
+values.push(segData ? segData[key] : 0);
+colors.push(SEGMENT_COLORS[key]);
+}
+
+segmentChart.data.labels = labels;
+segmentChart.data.datasets[0].data = values;
+segmentChart.data.datasets[0].backgroundColor = colors;
+
+// animation: วงบีบ-ยืดจากค่าเดิมไปค่าใหม่
+segmentChart.update({
+animation: { animateScale: true, animateRotate: true, duration: 700, easing: "easeOutQuart" }
+});
+}
+
 function buildKPICards(region, rangeN){
 var share = DATA.region_share[region];
 var n = DATA.actual_mrr.length;
@@ -372,6 +396,8 @@ var seg = DATA.segment_latest;
 segmentChart.data.datasets[0].data = [seg.enterprise*share, seg.midmarket*share, seg.smb*share];
 segmentChart.update();
 
+// NEW: Doughnut ใช้ข้อมูลจริงต่อ region + animation
+updateSegmentChart(region);
 updateWhatIf();
 }
 
