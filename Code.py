@@ -17,6 +17,13 @@ SEG_COLS = {
     "Simulated_SMB_MRR": "smb"
 }
 
+REGION_KEY_MAP = {
+    "North America": "NA",
+    "Europe": "EU",
+    "APAC": "APAC",
+    "Other": "Other"
+}
+
 # ---------------------------------------------------------
 # STEP 1: โหลดไฟล์ Master + Sort ตามวันที่
 # ---------------------------------------------------------
@@ -67,7 +74,6 @@ for col, name in SEG_COLS.items():
 # ---------------------------------------------------------
 # STEP 5: Segment Snapshot + Dynamic Stats by Region
 # ---------------------------------------------------------
-# Snapshot ล่าสุด (จาก rollback1) — ใช้ค่าเฉลี่ยเดือนล่าสุด เพื่อความสม่ำเสมอ
 last_month = monthly["YearMonth"].iloc[-1]
 df_last_month = df[df["YearMonth"] == last_month]
 segment_latest = {
@@ -80,6 +86,23 @@ seg_stats = df.groupby("Simulated_Region").agg(
     Churn_Rate_Pct=("Churn_Rate_Pct", "mean"),
     CAC=("CAC", "mean")
 ).round(2).to_dict(orient="index")
+
+# ---------------------------------------------------------
+# STEP 5.5 (NEW): Segment Snapshot แยกตาม Region จริง
+# ใช้ข้อมูล simulated รายแถวในเดือนล่าสุด group ตาม Simulated_Region
+# ทำให้ Doughnut มีสัดส่วนต่างกันจริงในแต่ละภูมิภาค
+# ---------------------------------------------------------
+segment_by_region = {"all": segment_latest}
+
+for region_name, key in REGION_KEY_MAP.items():
+    sub = df_last_month[df_last_month["Simulated_Region"] == region_name]
+    if len(sub) == 0:
+        segment_by_region[key] = None  # ไม่มีข้อมูล region นี้ใน CSV
+        continue
+    segment_by_region[key] = {
+        name: round(sub[col].mean(), 0)
+        for col, name in SEG_COLS.items()
+    }
 
 # ---------------------------------------------------------
 # STEP 6: Region Share — คำนวณจากข้อมูลจริง (แก้ hardcode!)
@@ -124,6 +147,7 @@ output = {
     "seg_growth": seg_growth,
     "seg_stats": seg_stats,
     "segment_latest": segment_latest,
+    "segment_by_region": segment_by_region,
     "anomalies": anomalies,
     "region_share": region_share
 }
@@ -132,3 +156,6 @@ with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
     json.dump(output, f, ensure_ascii=False, indent=2)
 
 print(f"Success! Merged pipeline → {OUTPUT_JSON}")
+print("Segment by region preview:")
+for k, v in segment_by_region.items():
+    print(f"  {k}: {v}")
