@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Executive Forecast Dashboard - Software KPI</title>
+<link rel="icon" href="data:,">
+<meta property="og:title" content="Executive Forecast Dashboard — Software KPI (MRR)">
+<meta property="og:description" content="Interactive MRR forecast dashboard built from raw CSV via automated Python pipeline — What-If Simulator, anomaly detection, regional filters.">
+<meta name="twitter:card" content="summary_large_image">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{--navy:#0f2444;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--gray:#64748b;--bg:#f4f6fa;--card:#ffffff;--border:#e2e8f0;}
@@ -72,12 +76,10 @@ footer{text-align:center;font-size:11.5px;color:var(--gray);padding:20px;}
 </header>
 
 <div id="libError">Chart.js library failed to load. Please check your internet connection and refresh.</div>
-<div id="dataError">Cannot load dashboard_data.json. Make sure the file is in the same folder as this page, and this page is opened via a local server such as python -m http.server.</div>
+<div id="dataError">Cannot load dashboard_data.json. Make sure the file is in the same folder as this page.</div>
 
 <div class="banner">
-<b>Data Notes:</b> Actual MRR, Target MRR, Churn, CAC, ARPU are real system data processed via automated Python Pipeline.
-Segment and Region are Simulated data for filter demonstration only.
-The What-If Simulator below uses simple assumed relationships to demonstrate business logic, not a real regression-based elasticity.
+<b>Data Notes:</b> This is a portfolio/testing project. All KPI series (MRR, Target, Churn, CAC, ARPU) are synthetic data processed via an automated Python Pipeline (Code.py). Segment and Region are simulated dimensions for filter demonstration. The What-If Simulator uses assumed elasticities, not regression-based estimates.
 </div>
 
 <div class="filters">
@@ -136,7 +138,7 @@ The What-If Simulator below uses simple assumed relationships to demonstrate bus
 <div class="g" id="whatifGrowth">ปรับ Slider ด้านบนเพื่อดูผลกระทบ</div>
 </div>
 <div class="assumption-note">
-สมมติฐาน (สำหรับสาธิต Logic เท่านั้น): ทุกๆ Churn ที่ลดลง 1 จุด % ช่วยเพิ่ม Growth ประมาณ 0.5% ต่อเดือน และทุกๆ CAC ที่ลดลง 10 ดอลลาร์ ช่วยเพิ่ม Growth ประมาณ 0.05% ต่อเดือน — Churn ตั้งต้นดึงจากข้อมูลจริงของแต่ละภูมิภาค (seg_stats) เมื่อเลือก Region ใดๆ
+สมมติฐาน (สำหรับสาธิต Logic เท่านั้น): ทุกๆ Churn ที่ลดลง 1 จุด % ช่วยเพิ่ม Growth ประมาณ 0.5% ต่อเดือน และทุกๆ CAC ที่ลดลง 10 ดอลลาร์ ช่วยเพิ่ม Growth ประมาณ 0.05% ต่อเดือน — Churn ตั้งต้นดึงจากข้อมูลของแต่ละภูมิภาค (seg_stats) เมื่อเลือก Region ใดๆ
 </div>
 </div>
 </div>
@@ -157,7 +159,7 @@ The What-If Simulator below uses simple assumed relationships to demonstrate bus
 <div class="chart-row2">
 <div class="section">
 <h2>5. สัดส่วนตาม Segment (เดือนล่าสุด) <span class="badge-sim">SIMULATED</span></h2>
-<div class="sub">ข้อมูลจำลองเพื่อสาธิต Filter เท่านั้น — ตัวเลขใน legend ปรับตามภูมิภาคที่เลือก</div>
+<div class="sub">ข้อมูลจำลองเพื่อสาธิต Filter เท่านั้น — ตัวเลขใน legend ปรับตามภูมิภาคที่เลือก (สัดส่วนวงคงที่)</div>
 <canvas id="segmentChart"></canvas>
 </div>
 <div class="section">
@@ -201,7 +203,7 @@ The What-If Simulator below uses simple assumed relationships to demonstrate bus
 <li>Segment และ Region เป็นข้อมูลจำลอง ต้องแทนที่ด้วยข้อมูล CRM จริงก่อนใช้งานจริง</li>
 <li>ข้อมูลทั้งหมดประมวลผลผ่าน Python Pipeline อัตโนมัติจาก Raw CSV สู่ JSON</li>
 <li>ตัวเลข KPI หลักคือ Snapshot เดือนล่าสุด ส่วน % เปลี่ยนแปลงเทียบกับจุดเริ่มต้นของช่วงเวลาที่เลือก</li>
-<li>เมื่อเลือกภูมิภาค ปริมาณรวม (MRR/Forecast/Segment) จะถูกย่อตาม share ของภูมิภาค ส่วนตัวเลขต่อหน่วย (Churn/CAC/ARPU/Payback) เป็นระดับบริษัทเสมอ</li>
+<li>เมื่อเลือกภูมิภาค ปริมาณรวม (MRR/Forecast/Segment/What-If) จะถูกย่อตาม share ของภูมิภาค ส่วนตัวเลขต่อหน่วย (Churn/CAC/ARPU/Payback) เป็นระดับบริษัทเสมอ</li>
 </ul>
 </div>
 </div>
@@ -266,7 +268,7 @@ var snapshot = fmtLabel(DATA.months[n-1]);
 var html = "";
 html += "<div class=\"kpi-card\"><div class=\"label\">MRR ล่าสุด (" + snapshot + ")</div><div class=\"value\">" + fmtMoney(latest) + "</div>" + deltaHtml(pctDelta(latest,prevActual),true,"%") + "</div>";
 html += "<div class=\"kpi-card\"><div class=\"label\">Target MRR (" + snapshot + ")</div><div class=\"value\">" + fmtMoney(latestTarget) + "</div>" + deltaHtml(pctDelta(latestTarget,prevTarget),true,"%") + "</div>";
-html += "<div class=\"kpi-card gap-card\"><div class=\"label\">Target Gap</div><div class=\"value\" style=\"color:" + (gap<0?"#dc2626":"#16a34a") + "\">" + fmtMoney(gap) + "</div><div class=\"delta " + (gap<0?"down":"up") + "\">" + gapPct.toFixed(2) + "%</div><div class=\"delta flat\">% คงที่ทุกภูมิภาค (ข้อมูล simulated)</div></div>";
+html += "<div class=\"kpi-card gap-card\"><div class=\"label\">Target Gap</div><div class=\"value\" style=\"color:" + (gap<0?"#dc2626":"#16a34a") + "\">" + fmtMoney(gap) + "</div><div class=\"delta " + (gap<0?"down":"up") + "\">" + gapPct.toFixed(2) + "%</div><div class=\"delta flat\">$ ต่างตามขนาดภูมิภาค / % คงที่ทุกภูมิภาค (ข้อมูล simulated)</div></div>";
 html += "<div class=\"kpi-card\"><div class=\"label\">Churn Rate (บริษัท, " + snapshot + ")</div><div class=\"value\">" + latestChurn.toFixed(2) + "%</div>" + deltaHtml(pctDelta(latestChurn,prevChurn),false,"%") + "</div>";
 html += "<div class=\"kpi-card\"><div class=\"label\">CAC (" + snapshot + ")</div><div class=\"value\">$" + latestCac.toFixed(1) + "</div>" + deltaHtml(pctDelta(latestCac,prevCac),false,"%") + "</div>";
 html += "<div class=\"kpi-card\"><div class=\"label\">ARPU (" + snapshot + ")</div><div class=\"value\">$" + latestArpu.toFixed(2) + "</div>" + deltaHtml(pctDelta(latestArpu,prevArpu),true,"%") + "</div>";
@@ -295,7 +297,9 @@ var latest = DATA.actual_mrr[n-1];
 var regionChurn = getRegionChurn(region);
 var churnBoost = Math.max(0, regionChurn - churnDelta) < regionChurn ? churnDelta*0.5 : 0;
 var simulatedGrowth = f.base_growth_pct + churnBoost + ((cacDelta/10)*0.05);
-var simulatedMrr = latest * (1 + simulatedGrowth/100);
+// FIX: คูณ share — What-If แสดง MRR ของภูมิภาคที่เลือก
+var share = DATA.region_share[region] || 0;
+var simulatedMrr = latest * share * (1 + simulatedGrowth/100);
 document.getElementById("whatifAmt").innerText = fmtMoney(simulatedMrr);
 document.getElementById("whatifGrowth").innerText =
 "Growth ที่ปรับแล้ว: " + simulatedGrowth.toFixed(2) + "% ต่อเดือน (เทียบ Base Case " + f.base_growth_pct + "%) | Churn ตั้งต้นของภูมิภาค: " + Number(regionChurn).toFixed(2) + "%";
@@ -329,7 +333,7 @@ var trendLabels = labels.slice();
 trendLabels.push("พยากรณ์");
 var actualForChart = actualSlice.slice();
 actualForChart.push(null);
-// FIX: forecast และ target จุดถัดไปคูณ share — แสดงได้ทุกภูมิภาค (share คงที่จึงถูกต้องพอดี)
+// Forecast และ target จุดถัดไปคูณ share — แสดงได้ทุกภูมิภาค
 var targetForChart = targetSlice.slice();
 targetForChart.push(DATA.forecast.next_target*share);
 var fcForChart = [];
