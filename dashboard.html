@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Forecast Dashboard - Software KPI</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--navy:#0f2444;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--gray:#64748b;--bg:#f4f6fa;--card:#ffffff;--border:#e2e8f0;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:#1e293b;}
+header{background:var(--navy);color:#fff;padding:20px 30px;}
+header h1{margin:0;font-size:22px;}
+header p{margin:4px 0 0;font-size:13px;color:#c7d2fe;}
+.banner{background:#fff7ed;border:1px solid #fdba74;color:#7c2d12;padding:12px 30px;font-size:13px;line-height:1.6;}
+#libError,#dataError{display:none;background:#fee2e2;border:1px solid #fca5a5;color:#7f1d1d;padding:12px 30px;font-size:13px;font-weight:600;}
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:#fff;padding:14px 30px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+.filters label{font-size:12px;color:var(--gray);margin-right:6px;}
+.filters select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:#fff;}
+.as-of{margin-left:auto;font-size:12px;color:var(--gray);}
+main{padding:24px 30px;max-width:1400px;margin:0 auto;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:26px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.kpi-card .label{font-size:12px;color:var(--gray);margin-bottom:6px;}
+.kpi-card .value{font-size:22px;font-weight:700;color:var(--navy);}
+.kpi-card .delta{font-size:12px;margin-top:6px;font-weight:600;}
+.up{color:var(--green);} .down{color:var(--red);} .flat{color:var(--gray);}
+.gap-card{border-left:4px solid var(--red);}
+.section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:22px;}
+.section h2{margin:0 0 4px;font-size:16px;color:var(--navy);}
+.section .sub{font-size:12.5px;color:var(--gray);margin-bottom:14px;}
+.chart-row{display:grid;grid-template-columns:2fr 1fr;gap:20px;}
+.chart-row2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+canvas{max-height:320px;}
+.scenario-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+.scenario-card{border-radius:10px;padding:16px;color:#fff;}
+.scenario-card h3{margin:0 0 6px;font-size:13px;opacity:.9;}
+.scenario-card .amt{font-size:20px;font-weight:700;}
+.scenario-card .g{font-size:12px;opacity:.85;margin-top:4px;}
+.worst{background:linear-gradient(135deg,#dc2626,#b91c1c);}
+.base{background:linear-gradient(135deg,#2563eb,#1d4ed8);}
+.best{background:linear-gradient(135deg,#16a34a,#15803d);}
+.whatif{background:linear-gradient(135deg,#7c3aed,#5b21b6);}
+.whatif-panel{background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:16px;margin-top:16px;}
+.whatif-panel h3{margin:0 0 12px;font-size:14px;color:#5b21b6;}
+.slider-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.slider-row label{font-size:12.5px;color:#4c1d95;min-width:170px;}
+.slider-row input[type=range]{flex:1;}
+.slider-row .val{font-size:13px;font-weight:700;color:#5b21b6;min-width:60px;text-align:right;}
+.assumption-note{font-size:11.5px;color:#7c3aed;background:#f3e8ff;padding:8px 10px;border-radius:6px;margin-top:6px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+th{color:var(--gray);font-weight:600;font-size:12px;}
+.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+.tag-risk{background:#fee2e2;color:#991b1b;}
+.tag-opp{background:#dcfce7;color:#166534;}
+.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.insight-list{list-style:none;margin:0;padding:0;}
+.insight-list li{padding:10px 0;border-bottom:1px dashed var(--border);font-size:13.5px;line-height:1.5;}
+.insight-list li:last-child{border-bottom:none;}
+.badge-sim{background:#f1f5f9;color:#475569;font-size:10.5px;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;}
+.assumption-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.7;color:#1e3a5f;}
+.assumption-box ul{margin:6px 0 0;padding-left:18px;}
+footer{text-align:center;font-size:11.5px;color:var(--gray);padding:20px;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Executive Forecast Dashboard - Software KPI (MRR)</h1>
+<p id="headerDates">Loading data...</p>
+</header>
+
+<div id="libError">Chart.js library failed to load. Please check your internet connection and refresh.</div>
+<div id="dataError">Cannot load dashboard_data.json. Make sure the file is in the same folder as this page, and this page is opened via a local server such as python -m http.server.</div>
+
+<div class="banner">
+<b>Data Notes:</b> Actual MRR, Target MRR, Churn, CAC, ARPU are real system data processed via automated Python Pipeline.
+Segment and Region are Simulated data for filter demonstration only.
+The What-If Simulator below uses simple assumed relationships to demonstrate business logic, not a real regression-based elasticity.
+</div>
+
+<div class="filters">
+<div><label>ช่วงเวลา:</label>
+<select id="rangeFilter" onchange="updateAll()">
+<option value="12">12 เดือนล่าสุด</option>
+<option value="24">24 เดือนล่าสุด</option>
+<option value="36" selected>36 เดือนล่าสุด (ทั้งหมดที่มี)</option>
+</select>
+</div>
+<div><label>ภูมิภาค (Simulated):</label>
+<select id="regionFilter" onchange="updateAll()">
+<option value="all" selected>ทั้งหมด (บริษัท)</option>
+<option value="NA">North America</option>
+<option value="EU">Europe</option>
+<option value="APAC">APAC</option>
+<option value="Other">Other</option>
+</select>
+</div>
+<div class="as-of" id="asOfText"></div>
+</div>
+
+<main>
+
+<div class="kpi-grid" id="kpiGrid"></div>
+
+<div class="section">
+<h2>1. แนวโน้มในอดีต: Actual vs Target MRR <span id="regionTag"></span></h2>
+<div class="sub">ข้อมูลรายเดือน ประมวลผลอัตโนมัติจาก Python Data Pipeline</div>
+<canvas id="trendChart"></canvas>
+</div>
+
+<div class="section">
+<h2>2. พยากรณ์เดือนถัดไป</h2>
+<div class="sub">คำนวณจาก Growth จริง 12 เดือนที่ระดับบริษัท — เมื่อเลือกภูมิภาค จะแสดงผลตามสัดส่วน (share) ของภูมิภาคนั้น</div>
+<div class="chart-row">
+<canvas id="forecastChart"></canvas>
+<div class="scenario-grid" id="scenarioCards"></div>
+</div>
+
+<div class="whatif-panel">
+<h3>What-If Simulator: ทดลองปรับกลยุทธ์ดูผลกระทบต่อ MRR เดือนหน้า <span id="whatifRegionTag" class="badge-sim"></span></h3>
+<div class="slider-row">
+<label>ลด Churn Rate ลง (จุด %)</label>
+<input type="range" id="churnSlider" min="0" max="2" step="0.1" value="0" oninput="updateWhatIf()">
+<span class="val" id="churnVal">0.0%</span>
+</div>
+<div class="slider-row">
+<label>ลด CAC ลง ($)</label>
+<input type="range" id="cacSlider" min="0" max="50" step="5" value="0" oninput="updateWhatIf()">
+<span class="val" id="cacVal">$0</span>
+</div>
+<div class="scenario-card whatif" id="whatifResult">
+<h3>ผลลัพธ์จำลอง (What-If Forecast)</h3>
+<div class="amt" id="whatifAmt">-</div>
+<div class="g" id="whatifGrowth">ปรับ Slider ด้านบนเพื่อดูผลกระทบ</div>
+</div>
+<div class="assumption-note">
+สมมติฐาน (สำหรับสาธิต Logic เท่านั้น): ทุกๆ Churn ที่ลดลง 1 จุด % ช่วยเพิ่ม Growth ประมาณ 0.5% ต่อเดือน และทุกๆ CAC ที่ลดลง 10 ดอลลาร์ ช่วยเพิ่ม Growth ประมาณ 0.05% ต่อเดือน — Churn ตั้งต้นดึงจากข้อมูลจริงของแต่ละภูมิภาค (seg_stats) เมื่อเลือก Region ใดๆ
+</div>
+</div>
+</div>
+
+<div class="chart-row2">
+<div class="section">
+<h2>3. แนวโน้ม Target Gap รายเดือน (%)</h2>
+<div class="sub">แท่งสีแดงคือต่ำกว่าเป้า — % สัดส่วนเท่ากันทุกภูมิภาคเนื่องจากข้อมูล simulated ใช้ share คงที่</div>
+<canvas id="gapChart"></canvas>
+</div>
+<div class="section">
+<h2>4. Churn / CAC / ARPU Trend (ระดับบริษัท)</h2>
+<div class="sub">Churn ลดลงต่อเนื่อง ขณะที่ CAC และ ARPU เพิ่มขึ้นทั้งคู่</div>
+<canvas id="secondaryChart"></canvas>
+</div>
+</div>
+
+<div class="chart-row2">
+<div class="section">
+<h2>5. สัดส่วนตาม Segment (เดือนล่าสุด) <span class="badge-sim">SIMULATED</span></h2>
+<div class="sub">ข้อมูลจำลองเพื่อสาธิต Filter เท่านั้น — ตัวเลขใน legend ปรับตามภูมิภาคที่เลือก</div>
+<canvas id="segmentChart"></canvas>
+</div>
+<div class="section">
+<h2>6. จุดที่ผิดปกติทางสถิติ (Anomaly Log)</h2>
+<div class="sub">ตรวจจับอัตโนมัติด้วย Z-score บนข้อมูลรายวันทั้งหมด (เกณฑ์ 2.5 SD)</div>
+<table>
+<thead><tr><th>วันที่</th><th>Actual MRR</th><th>เปลี่ยนแปลง/วัน</th><th>สถานะ</th></tr></thead>
+<tbody id="anomalyBody"></tbody>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>7. ความเสี่ยงและโอกาส</h2>
+<div class="insight-grid">
+<div>
+<h3 style="font-size:14px;color:var(--red);">ความเสี่ยงที่ต้องจับตา</h3>
+<ul class="insight-list">
+<li><span class="tag tag-risk">RISK</span> Actual ต่ำกว่า Target ต่อเนื่องทุกเดือน ไม่ใช่เหตุการณ์ชั่วคราว</li>
+<li><span class="tag tag-risk">RISK</span> CAC เพิ่มขึ้นต่อเนื่อง ต้นทุนหาลูกค้าแพงขึ้นเรื่อยๆ</li>
+<li><span class="tag tag-risk">RISK</span> พบ Anomaly ที่ยังไม่ทราบสาเหตุ ควรตรวจสอบร่วมกับทีม</li>
+</ul>
+</div>
+<div>
+<h3 style="font-size:14px;color:var(--green);">โอกาสที่ควรใช้ประโยชน์</h3>
+<ul class="insight-list">
+<li><span class="tag tag-opp">OPP</span> Churn ลดลงต่อเนื่อง Retention ดีขึ้นชัดเจน</li>
+<li><span class="tag tag-opp">OPP</span> ARPU โตเร็วกว่า CAC Unit Economics ยังดีขึ้น</li>
+<li><span class="tag tag-opp">OPP</span> Gap เทียบ Target แคบลงเล็กน้อยเมื่อเทียบปีก่อน</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>8. สมมติฐานของระบบ</h2>
+<div class="assumption-box">
+<ul>
+<li>Forecast ใช้ Trend Extrapolation จาก Growth Rate จริงย้อนหลัง 12 เดือน ไม่ใช่ bottoms-up planning</li>
+<li>What-If Simulator ใช้สมมติฐานความสัมพันธ์อย่างง่าย เพื่อสาธิต Business Logic เท่านั้น</li>
+<li>Segment และ Region เป็นข้อมูลจำลอง ต้องแทนที่ด้วยข้อมูล CRM จริงก่อนใช้งานจริง</li>
+<li>ข้อมูลทั้งหมดประมวลผลผ่าน Python Pipeline อัตโนมัติจาก Raw CSV สู่ JSON</li>
+<li>ตัวเลข KPI หลักคือ Snapshot เดือนล่าสุด ส่วน % เปลี่ยนแปลงเทียบกับจุดเริ่มต้นของช่วงเวลาที่เลือก</li>
+<li>เมื่อเลือกภูมิภาค ปริมาณรวม (MRR/Forecast/Segment) จะถูกย่อตาม share ของภูมิภาค ส่วนตัวเลขต่อหน่วย (Churn/CAC/ARPU/Payback) เป็นระดับบริษัทเสมอ</li>
+</ul>
+</div>
+</div>
+
+</main>
+
+<footer id="footerText">Executive Forecast Dashboard - Data-Driven Architecture (CSV to Python Pipeline to JSON to Interactive Dashboard)</footer>
+
+<script>
+var DATA = null;
+var trendChart, forecastChart, gapChart, secondaryChart, segmentChart;
+
+var STATS_KEY = {"all": null, "NA": "North America", "EU": "Europe", "APAC": "APAC", "Other": "Other"};
+var REGION_NAMES = {"all": "", "NA": "North America", "EU": "Europe", "APAC": "APAC", "Other": "Other"};
+
+function fmtLabel(ym){
+var parts = ym.split("-");
+var names = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+return names[parseInt(parts[1],10)-1] + " " + parts[0].slice(2);
+}
+function fmtMoney(v){ return "$" + Math.round(v).toLocaleString(); }
+function pctDelta(cur, prev){ return ((cur-prev)/prev*100); }
+function applyShare(arr, share){ var out=[]; for(var i=0;i<arr.length;i++){ out.push(arr[i]*share); } return out; }
+function getRegionChurn(region){
+var n = DATA.churn_rate.length;
+var statsKey = STATS_KEY[region];
+if(statsKey && DATA.seg_stats && DATA.seg_stats[statsKey] && DATA.seg_stats[statsKey].Churn_Rate_Pct != null){
+return DATA.seg_stats[statsKey].Churn_Rate_Pct;
+}
+return DATA.churn_rate[n-1];
+}
+
+function buildKPICards(region, rangeN){
+var share = DATA.region_share[region];
+var n = DATA.actual_mrr.length;
+var latest = DATA.actual_mrr[n-1]*share;
+var latestTarget = DATA.target_mrr[n-1]*share;
+var latestChurn = DATA.churn_rate[n-1];
+var latestCac = DATA.cac[n-1];
+var latestArpu = DATA.arpu[n-1];
+
+var firstIdx = Math.max(0, n - rangeN);
+var compareLabel = fmtLabel(DATA.months[firstIdx]);
+
+var prevActual = DATA.actual_mrr[firstIdx]*share;
+var prevTarget = DATA.target_mrr[firstIdx]*share;
+var prevChurn = DATA.churn_rate[firstIdx];
+var prevCac = DATA.cac[firstIdx];
+var prevArpu = DATA.arpu[firstIdx];
+
+var gap = latest - latestTarget;
+var gapPct = latestTarget !== 0 ? (gap/latestTarget*100) : 0;
+function deltaHtml(val, goodIfUp, suffix){
+var isUp = val>=0;
+var cls = (isUp===goodIfUp) ? "up" : "down";
+var arrow = isUp ? "&#9650;" : "&#9660;";
+return "<span class=\"delta " + cls + "\">" + arrow + " " + Math.abs(val).toFixed(2) + suffix + " เทียบ " + compareLabel + "</span>";
+}
+var cacPayback = latestArpu ? (latestCac/latestArpu).toFixed(1) : "-";
+var snapshot = fmtLabel(DATA.months[n-1]);
+
+var html = "";
+html += "<div class=\"kpi-card\"><div class=\"label\">MRR ล่าสุด (" + snapshot + ")</div><div class=\"value\">" + fmtMoney(latest) + "</div>" + deltaHtml(pctDelta(latest,prevActual),true,"%") + "</div>";
+html += "<div class=\"kpi-card\"><div class=\"label\">Target MRR (" + snapshot + ")</div><div class=\"value\">" + fmtMoney(latestTarget) + "</div>" + deltaHtml(pctDelta(latestTarget,prevTarget),true,"%") + "</div>";
+html += "<div class=\"kpi-card gap-card\"><div class=\"label\">Target Gap</div><div class=\"value\" style=\"color:" + (gap<0?"#dc2626":"#16a34a") + "\">" + fmtMoney(gap) + "</div><div class=\"delta " + (gap<0?"down":"up") + "\">" + gapPct.toFixed(2) + "%</div><div class=\"delta flat\">% คงที่ทุกภูมิภาค (ข้อมูล simulated)</div></div>";
+html += "<div class=\"kpi-card\"><div class=\"label\">Churn Rate (บริษัท, " + snapshot + ")</div><div class=\"value\">" + latestChurn.toFixed(2) + "%</div>" + deltaHtml(pctDelta(latestChurn,prevChurn),false,"%") + "</div>";
+html += "<div class=\"kpi-card\"><div class=\"label\">CAC (" + snapshot + ")</div><div class=\"value\">$" + latestCac.toFixed(1) + "</div>" + deltaHtml(pctDelta(latestCac,prevCac),false,"%") + "</div>";
+html += "<div class=\"kpi-card\"><div class=\"label\">ARPU (" + snapshot + ")</div><div class=\"value\">$" + latestArpu.toFixed(2) + "</div>" + deltaHtml(pctDelta(latestArpu,prevArpu),true,"%") + "</div>";
+html += "<div class=\"kpi-card\"><div class=\"label\">CAC Payback ประมาณ (ระดับบริษัท)</div><div class=\"value\">~" + cacPayback + " เดือน</div><div class=\"delta flat\">CAC หาร ARPU ล่าสุด</div></div>";
+document.getElementById("kpiGrid").innerHTML = html;
+}
+
+function buildScenarioCards(share){
+var f = DATA.forecast;
+var html = "";
+html += "<div class=\"scenario-card worst\"><h3>Worst Case</h3><div class=\"amt\">" + fmtMoney(f.worst_case*share) + "</div><div class=\"g\">Growth " + f.worst_growth_pct + "% ต่อเดือน</div></div>";
+html += "<div class=\"scenario-card base\"><h3>Base Case</h3><div class=\"amt\">" + fmtMoney(f.base_case*share) + "</div><div class=\"g\">Growth " + f.base_growth_pct + "% ต่อเดือน</div></div>";
+html += "<div class=\"scenario-card best\"><h3>Best Case</h3><div class=\"amt\">" + fmtMoney(f.best_case*share) + "</div><div class=\"g\">Growth " + f.best_growth_pct + "% ต่อเดือน</div></div>";
+document.getElementById("scenarioCards").innerHTML = html;
+}
+
+function updateWhatIf(){
+var region = document.getElementById("regionFilter").value;
+var churnDelta = parseFloat(document.getElementById("churnSlider").value);
+var cacDelta = parseFloat(document.getElementById("cacSlider").value);
+document.getElementById("churnVal").innerText = churnDelta.toFixed(1) + "%";
+document.getElementById("cacVal").innerText = "$" + cacDelta.toFixed(0);
+var f = DATA.forecast;
+var n = DATA.actual_mrr.length;
+var latest = DATA.actual_mrr[n-1];
+var regionChurn = getRegionChurn(region);
+var churnBoost = Math.max(0, regionChurn - churnDelta) < regionChurn ? churnDelta*0.5 : 0;
+var simulatedGrowth = f.base_growth_pct + churnBoost + ((cacDelta/10)*0.05);
+var simulatedMrr = latest * (1 + simulatedGrowth/100);
+document.getElementById("whatifAmt").innerText = fmtMoney(simulatedMrr);
+document.getElementById("whatifGrowth").innerText =
+"Growth ที่ปรับแล้ว: " + simulatedGrowth.toFixed(2) + "% ต่อเดือน (เทียบ Base Case " + f.base_growth_pct + "%) | Churn ตั้งต้นของภูมิภาค: " + Number(regionChurn).toFixed(2) + "%";
+}
+
+function updateAll(){
+var n = parseInt(document.getElementById("rangeFilter").value,10);
+var region = document.getElementById("regionFilter").value;
+var share = DATA.region_share[region] || 0;
+document.getElementById("regionTag").innerHTML = region==="all" ? "" : "<span class=\"badge-sim\">" + REGION_NAMES[region] + " (Simulated)</span>";
+document.getElementById("whatifRegionTag").innerText = region==="all" ? "ระดับบริษัท" : REGION_NAMES[region];
+
+var labels = [];
+var startIdx = DATA.months.length - n;
+for(var i=startIdx;i<DATA.months.length;i++){ labels.push(fmtLabel(DATA.months[i])); }
+
+var actualSlice = applyShare(DATA.actual_mrr.slice(-n), share);
+var targetSlice = applyShare(DATA.target_mrr.slice(-n), share);
+var churnSlice = DATA.churn_rate.slice(-n);
+var cacSlice = DATA.cac.slice(-n);
+var arpuSlice = DATA.arpu.slice(-n);
+
+var gapSlice = [];
+for(var j=0;j<actualSlice.length;j++){ gapSlice.push(targetSlice[j] ? (actualSlice[j]-targetSlice[j])/targetSlice[j]*100 : 0); }
+
+buildKPICards(region, n);
+
+if(!trendChart) return;
+
+var trendLabels = labels.slice();
+trendLabels.push("พยากรณ์");
+var actualForChart = actualSlice.slice();
+actualForChart.push(null);
+// FIX: forecast และ target จุดถัดไปคูณ share — แสดงได้ทุกภูมิภาค (share คงที่จึงถูกต้องพอดี)
+var targetForChart = targetSlice.slice();
+targetForChart.push(DATA.forecast.next_target*share);
+var fcForChart = [];
+for(var k=0;k<actualSlice.length-1;k++){ fcForChart.push(null); }
+fcForChart.push(actualSlice[actualSlice.length-1]);
+fcForChart.push(DATA.forecast.base_case*share);
+
+trendChart.data.labels = trendLabels;
+trendChart.data.datasets[0].data = actualForChart;
+trendChart.data.datasets[1].data = targetForChart;
+trendChart.data.datasets[2].data = fcForChart;
+trendChart.update();
+
+forecastChart.data.datasets[0].data = [
+DATA.forecast.worst_case*share,
+DATA.forecast.base_case*share,
+DATA.forecast.best_case*share,
+DATA.forecast.next_target*share
+];
+forecastChart.update();
+
+var gapColors = [];
+for(var m=0;m<gapSlice.length;m++){ gapColors.push(gapSlice[m]<0 ? "#dc2626" : "#16a34a"); }
+gapChart.data.labels = labels;
+gapChart.data.datasets[0].data = gapSlice;
+gapChart.data.datasets[0].backgroundColor = gapColors;
+gapChart.update();
+
+secondaryChart.data.labels = labels;
+secondaryChart.data.datasets[0].data = churnSlice;
+secondaryChart.data.datasets[1].data = cacSlice;
+secondaryChart.data.datasets[2].data = arpuSlice;
+secondaryChart.update();
+
+var seg = DATA.segment_latest;
+segmentChart.data.datasets[0].data = [seg.enterprise*share, seg.midmarket*share, seg.smb*share];
+segmentChart.update();
+
+updateWhatIf();
+}
+
+function initCharts(){
+var anomalyBody = document.getElementById("anomalyBody");
+for(var i=0;i<DATA.anomalies.length;i++){
+var a = DATA.anomalies[i];
+var isDrop = a.change < 0;
+var tr = document.createElement("tr");
+tr.innerHTML = "<td>" + a.date + "</td><td>" + a.mrr.toLocaleString() + "</td><td style=\"color:" + (isDrop?"#dc2626":"#16a34a") + "\">" + (isDrop?"":"+") + "" + a.change.toLocaleString() + "</td><td><span class=\"tag tag-risk\">ตรวจสอบ</span></td>";
+anomalyBody.appendChild(tr);
+}
+
+buildScenarioCards(1);
+
+segmentChart = new Chart(document.getElementById("segmentChart"), {
+type:"doughnut",
+data:{labels:["Enterprise","Mid-Market","SMB"], datasets:[{data:[DATA.segment_latest.enterprise,DATA.segment_latest.midmarket,DATA.segment_latest.smb], backgroundColor:["#2563eb","#f59e0b","#16a34a"]}]},
+options:{
+plugins:{
+legend:{position:"bottom", labels:{generateLabels:function(chart){
+var d = chart.data.datasets[0].data;
+var colors = ["#2563eb","#f59e0b","#16a34a"];
+var names = ["Enterprise","Mid-Market","SMB"];
+return names.map(function(nm,idx){
+return {text: nm + " — " + fmtMoney(d[idx]), fillStyle: colors[idx], strokeStyle: colors[idx]};
+});
+}}},
+tooltip:{callbacks:{label:function(ctx){
+var total = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+return ctx.label + ": " + fmtMoney(ctx.parsed) + " (" + (ctx.parsed/total*100).toFixed(1) + "%)";
+}}}
+}
+}
+});
+
+trendChart = new Chart(document.getElementById("trendChart"), {type:"line", data:{labels:[], datasets:[{label:"Actual MRR", data:[], borderColor:"#2563eb", backgroundColor:"#2563eb22", fill:true, tension:0.3, spanGaps:false},{label:"Target MRR", data:[], borderColor:"#dc2626", borderDash:[5,4], fill:false, tension:0.3, spanGaps:false},{label:"Forecast Base Case", data:[], borderColor:"#16a34a", borderDash:[2,3], fill:false, tension:0.3, spanGaps:false}]}, options:{responsive:true, interaction:{mode:"index",intersect:false}, plugins:{legend:{position:"bottom"}}, scales:{y:{ticks:{callback:function(v){return "$"+v.toLocaleString();}}}}}});
+
+forecastChart = new Chart(document.getElementById("forecastChart"), {type:"bar", data:{labels:["Worst Case","Base Case","Best Case","Target"], datasets:[{data:[DATA.forecast.worst_case,DATA.forecast.base_case,DATA.forecast.best_case,DATA.forecast.next_target], backgroundColor:["#dc2626","#2563eb","#16a34a","#94a3b8"]}]}, options:{plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:function(v){return "$"+v.toLocaleString();}}}}}});
+
+gapChart = new Chart(document.getElementById("gapChart"), {type:"bar", data:{labels:[], datasets:[{label:"Target Gap %", data:[], backgroundColor:[]}]}, options:{plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:function(v){return v+"%";}}}}}});
+
+secondaryChart = new Chart(document.getElementById("secondaryChart"), {type:"line", data:{labels:[], datasets:[{label:"Churn %", data:[], borderColor:"#dc2626", yAxisID:"y"},{label:"CAC ", data:[], borderColor:"#f59e0b", yAxisID:"y1"},{label:"ARPU", data:[], borderColor:"#16a34a", yAxisID:"y1"}]}, options:{plugins:{legend:{position:"bottom"}}, scales:{y:{position:"left", title:{display:true,text:"Churn %"}}, y1:{position:"right", grid:{drawOnChartArea:false}, title:{display:true,text:"$"}}}}});
+
+updateAll();
+}
+
+fetch("dashboard_data.json")
+.then(function(response){
+if(!response.ok){ throw new Error("HTTP " + response.status); }
+return response.json();
+})
+.then(function(json){
+DATA = json;
+document.getElementById("headerDates").innerText =
+"ข้อมูลล่าสุด: " + DATA.meta.date_range_end + " | ประมวลผลอัตโนมัติผ่าน Python Pipeline จากไฟล์ " + DATA.meta.generated_from_file;
+document.getElementById("asOfText").innerText = "ข้อมูลล่าสุด: " + DATA.meta.date_range_end;
+document.getElementById("footerText").innerText =
+"Executive Forecast Dashboard - Data-Driven Architecture | ข้อมูลถึงวันที่ " + DATA.meta.date_range_end;
+
+Object.keys(DATA.region_share).forEach(function(k){
+if(k !== "all" && DATA.region_share[k] === 0){
+console.warn("region_share[" + k + "] = 0 — เช็คการสะกดชื่อ region ใน CSV");
+}
+});
+
+if(typeof Chart !== "undefined"){
+initCharts();
+} else {
+document.getElementById("libError").style.display = "block";
+}
+})
+.catch(function(err){
+document.getElementById("dataError").style.display = "block";
+console.error(err);
+});
+</script>
+</body>
+</html>
