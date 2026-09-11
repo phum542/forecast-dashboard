@@ -268,6 +268,33 @@
     "midmarket": 183924.0,
     "smb": 115203.0
   },
+  "segment_by_region": {
+    "all": {
+      "enterprise": 200038.0,
+      "midmarket": 183924.0,
+      "smb": 115203.0
+    },
+    "NA": {
+      "enterprise": 198416.0,
+      "midmarket": 183489.0,
+      "smb": 115987.0
+    },
+    "EU": {
+      "enterprise": 198208.0,
+      "midmarket": 181325.0,
+      "smb": 118455.0
+    },
+    "APAC": {
+      "enterprise": 205886.0,
+      "midmarket": 184982.0,
+      "smb": 112401.0
+    },
+    "Other": {
+      "enterprise": 202119.0,
+      "midmarket": 189866.0,
+      "smb": 108839.0
+    }
+  },
   "anomalies": [
     {
       "date": "2026-08-22",
